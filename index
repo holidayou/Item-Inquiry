@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>产品查询</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f4fa;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .card {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.1);
+            padding: 2rem 2rem 2.2rem;
+            transition: all 0.2s;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1e2a3e;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sub {
+            color: #5b6e8c;
+            font-size: 0.85rem;
+            border-left: 3px solid #2c7da0;
+            padding-left: 0.8rem;
+            margin-bottom: 1.8rem;
+        }
+
+        .search-box {
+            background: #f8fafc;
+            border-radius: 1.5rem;
+            padding: 0.2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-bottom: 1.8rem;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.9rem 1.2rem;
+            font-size: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 2rem;
+            background: white;
+            outline: none;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            border-color: #2c7da0;
+            box-shadow: 0 0 0 3px rgba(44,125,160,0.2);
+        }
+
+        .search-btn {
+            background: #1e2a3e;
+            border: none;
+            padding: 0.9rem 1.8rem;
+            border-radius: 2rem;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-btn:hover {
+            background: #0f1a24;
+            transform: scale(0.97);
+        }
+
+        .result-area {
+            background: #fefefe;
+            border-radius: 1.5rem;
+            border: 1px solid #eef2f8;
+            padding: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .result-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #2c3e66;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px dashed #e2edf7;
+            padding-bottom: 0.6rem;
+        }
+
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .info-label {
+            width: 140px;
+            font-weight: 500;
+            color: #2c3e66;
+        }
+
+        .info-value {
+            flex: 1;
+            color: #1f2b48;
+            word-break: break-word;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #eef2ff;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-green {
+            background: #e0f2e9;
+            color: #1f6e43;
+        }
+
+        .badge-blue {
+            background: #e6f0fa;
+            color: #1e6f9f;
+        }
+
+        .badge-orange {
+            background: #fff0e0;
+            color: #b45b0a;
+        }
+
+        .no-data {
+            color: #8a99b0;
+            text-align: center;
+            padding: 1.5rem 0;
+            font-style: italic;
+        }
+
+        .example-tag {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #6c7a91;
+            background: #f1f5f9;
+            padding: 0.5rem 0.8rem;
+            border-radius: 1rem;
+            display: inline-block;
+        }
+
+        hr {
+            margin: 1rem 0;
+            border: 0;
+            height: 1px;
+            background: #eef2f8;
+        }
+
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #8ba0bc;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>
+        📦 产品查询
+    </h1>
+    <div class="sub">
+        输入产品名称或批准文号 · 查询厂家、进出口资质及功能属性
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="productInput" class="search-input" placeholder="例如：蓝莓叶黄素眼睛喷雾 或 豫健用生【2025】第0071号" autocomplete="off">
+        <button id="searchBtn" class="search-btn">🔍 查询</button>
+    </div>
+
+    <div class="result-area" id="resultArea">
+        <div class="result-title">
+            📋 查询结果
+        </div>
+        <div id="resultContent">
+            <div class="no-data">等待输入查询…<br>可尝试“蓝莓叶黄素眼睛喷雾”或“豫健用生【2025】第0071号”</div>
+        </div>
+    </div>
+
+    <div class="example-tag">
+        💡 演示数据包含：蓝莓叶黄素眼睛喷雾、豫健用生【2025】第0071号、豫健用生【2025】第1372号
+    </div>
+    <footer>
+        本查询基于公开备案信息模拟，真实数据需接入国家药监局/海关等官方接口
+    </footer>
+</div>
+
+<script>
+    // ---------- 产品数据库（模拟）----------
+    // 实际应用可替换为 API 请求
+    const productDB = [
+        {
+            keywords: ["蓝莓叶黄素眼睛喷雾", "蓝莓叶黄素喷雾", "叶黄素眼睛喷雾"],
+            productName: "蓝莓叶黄素眼睛喷雾",
+            manufacturer: "南阳宛草方药业有限公司",
+            // 是否有进出口资质：从之前的对话信息，未查到该公司有明确的进出口备案（无对外贸易经营者备案登记），故设为“暂未具备”
+            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
+            // 功能分类: 保健 / 治疗
+            functionType: "保健功能",   // 依据“豫健用生”为保健用品，不能治病
+            additionalInfo: "批准文号：豫健用生【2025】第0071号 / 豫健用生【2025】第1372号（保健用品）"
+        },
+        {
+            keywords: ["豫健用生【2025】第0071号", "0071号", "豫健用生2025第0071号"],
+            productName: "蓝莓叶黄素眼睛喷雾（0071批）",
+            manufacturer: "南阳宛草方药业有限公司",
+            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
+            functionType: "保健功能",
+            additionalInfo: "河南省保健用品批号，不可替代药品治疗疾病。"
+        },
+        {
+            keywords: ["豫健用生【2025】第1372号", "1372号", "豫健用生2025第1372号"],
+            productName: "蓝莓叶黄素眼睛喷雾（1372批）",
+            manufacturer: "南阳宛草方药业有限公司",
+            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
+            functionType: "保健功能",
+            additionalInfo: "同系列保健用品，具有缓解眼疲劳的保健作用。"
+        },
+        // 可扩展其他示例产品，此处仅展示核心演示数据
+        {
+            keywords: ["布洛芬", "布洛芬片"],
+            productName: "布洛芬片（示例）",
+            manufacturer: "某制药有限公司",
+            importExportQualification: "具备药品出口资质（需核对具体企业）",
+            functionType: "治病功能（解热镇痛抗炎）",
+            additionalInfo: "此为示例数据，真实产品需查询国药准字。"
+        }
+    ];
+
+    // 模糊匹配函数（不区分大小写，去除空格）
+    function normalizeStr(str) {
+        return str.trim().toLowerCase().replace(/\s+/g, '');
+    }
+
+    function searchProduct(query) {
+        if (!query || query.trim() === "") {
+            return null;
+        }
+        const normalizedQuery = normalizeStr(query);
+        // 遍历数据库
+        for (let item of productDB) {
+            for (let kw of item.keywords) {
+                if (normalizeStr(kw) === normalizedQuery) {
+                    return item;
+                }
+            }
+        }
+        // 未精确匹配时，尝试包含匹配（部分关键词）
+        for (let item of productDB) {
+            for (let kw of item.keywords) {
+                if (normalizedQuery.includes(normalizeStr(kw)) || normalizeStr(kw).includes(normalizedQuery)) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    // 渲染结果
+    function renderResult(product) {
+        const resultDiv = document.getElementById('resultContent');
+        if (!product) {
+            resultDiv.innerHTML = `
+                <div class="no-data">
+                    ⚠️ 未找到相关产品信息<br>
+                    请尝试输入：蓝莓叶黄素眼睛喷雾 或 批准文号 豫健用生【2025】第0071号
+                </div>
+            `;
+            return;
+        }
+
+        // 根据功能类型添加不同样式
+        let functionBadgeClass = "";
+        let functionText = product.functionType;
+        if (functionText.includes("保健")) {
+            functionBadgeClass = "badge-green";
+        } else if (functionText.includes("治病")) {
+            functionBadgeClass = "badge-orange";
+        } else {
+            functionBadgeClass = "badge-blue";
+        }
+
+        // 进出口资质显示样式
+        let importBadgeClass = product.importExportQualification.includes("具备") ? "badge-green" : "badge-blue";
+
+        let html = `
+            <div class="info-row">
+                <div class="info-label">🏭 生产厂家</div>
+                <div class="info-value"><strong>${escapeHtml(product.manufacturer)}</strong></div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">🌍 进出口资质</div>
+                <div class="info-value"><span class="badge ${importBadgeClass}">${escapeHtml(product.importExportQualification)}</span></div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">💊 功能属性</div>
+                <div class="info-value"><span class="badge ${functionBadgeClass}">${escapeHtml(product.functionType)}</span>
+                ${product.functionType === "保健功能" ? '<span style="font-size:0.75rem; margin-left: 0.5rem; color:#6c7a91;">（不能替代药品治疗疾病）</span>' : ''}
+                </div>
+            </div>
+        `;
+        if (product.additionalInfo) {
+            html += `
+                <hr>
+                <div class="info-row">
+                    <div class="info-label">📌 补充信息</div>
+                    <div class="info-value">${escapeHtml(product.additionalInfo)}</div>
+                </div>
+            `;
+        }
+        resultDiv.innerHTML = html;
+    }
+
+    // 简单防XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // 查询入口
+    function performQuery() {
+        const inputElem = document.getElementById('productInput');
+        let query = inputElem.value;
+        if (!query.trim()) {
+            document.getElementById('resultContent').innerHTML = `<div class="no-data">请输入产品名称或批准文号后查询</div>`;
+            return;
+        }
+        const result = searchProduct(query);
+        renderResult(result);
+    }
+
+    // 绑定事件
+    document.getElementById('searchBtn').addEventListener('click', performQuery);
+    document.getElementById('productInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performQuery();
+        }
+    });
+
+    // 初始可聚焦
+    document.getElementById('productInput').focus();
+</script>
+</body>
+</html>

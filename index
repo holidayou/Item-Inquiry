@@ -2,387 +2,526 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>产品查询</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>产品智能查询</title>
+    <!-- Tesseract.js 用于 OCR -->
+    <script src="https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background: #f0f4fa;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5f7fb;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, sans-serif;
+            padding: 20px 16px 40px;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 1.5rem;
         }
 
+        /* 卡片容器 */
         .card {
-            max-width: 700px;
-            width: 100%;
+            max-width: 550px;
+            margin: 0 auto;
             background: white;
-            border-radius: 2rem;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.1);
-            padding: 2rem 2rem 2.2rem;
-            transition: all 0.2s;
+            border-radius: 32px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            padding: 20px 20px 28px;
         }
 
         h1 {
             font-size: 1.8rem;
             font-weight: 600;
-            color: #1e2a3e;
-            margin-bottom: 0.3rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            background: linear-gradient(135deg, #1e2a3a, #2c3e66);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
         }
 
         .sub {
-            color: #5b6e8c;
             font-size: 0.85rem;
+            color: #6c7a8e;
             border-left: 3px solid #2c7da0;
-            padding-left: 0.8rem;
-            margin-bottom: 1.8rem;
+            padding-left: 12px;
+            margin-bottom: 24px;
         }
 
-        .search-box {
-            background: #f8fafc;
-            border-radius: 1.5rem;
-            padding: 0.2rem;
+        /* 搜索区域 */
+        .search-section {
+            margin-bottom: 20px;
+        }
+
+        .input-group {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-            margin-bottom: 1.8rem;
+            gap: 10px;
             align-items: center;
+            background: #f8fafc;
+            border-radius: 60px;
+            padding: 4px;
+            border: 1px solid #e2e8f0;
         }
 
-        .search-input {
+        .input-group input {
             flex: 1;
-            padding: 0.9rem 1.2rem;
+            padding: 14px 18px;
             font-size: 1rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 2rem;
-            background: white;
+            border: none;
+            background: transparent;
             outline: none;
-            transition: 0.2s;
             font-family: inherit;
         }
 
-        .search-input:focus {
-            border-color: #2c7da0;
-            box-shadow: 0 0 0 3px rgba(44,125,160,0.2);
-        }
-
-        .search-btn {
+        .input-group button {
             background: #1e2a3e;
             border: none;
-            padding: 0.9rem 1.8rem;
-            border-radius: 2rem;
+            padding: 12px 20px;
+            border-radius: 60px;
             font-weight: 500;
             color: white;
+            font-size: 0.95rem;
             cursor: pointer;
-            font-size: 0.9rem;
             transition: 0.2s;
-            display: inline-flex;
+            white-space: nowrap;
+        }
+
+        .input-group button:active {
+            transform: scale(0.96);
+            background: #0f1a24;
+        }
+
+        /* 图片识别区域 */
+        .ocr-section {
+            background: #f9fbfe;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #eef2f8;
+        }
+
+        .ocr-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #2c3e66;
+            margin-bottom: 12px;
+            display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .search-btn:hover {
-            background: #0f1a24;
-            transform: scale(0.97);
+        .ocr-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
+        .ocr-btn {
+            flex: 1;
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .ocr-btn:active {
+            background: #eef2fa;
+        }
+
+        .image-preview {
+            margin-top: 12px;
+            max-width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            display: none;
+            background: #f1f5f9;
+            border-radius: 20px;
+        }
+
+        .image-preview img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .ocr-status {
+            font-size: 0.75rem;
+            color: #6c7a8e;
+            margin-top: 8px;
+            padding: 4px 0;
+        }
+
+        .ocr-result-text {
+            background: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            word-break: break-word;
+            display: none;
+        }
+
+        /* 结果区域 */
         .result-area {
-            background: #fefefe;
-            border-radius: 1.5rem;
+            background: #ffffff;
+            border-radius: 24px;
             border: 1px solid #eef2f8;
-            padding: 1.5rem;
-            margin-top: 0.5rem;
+            margin: 20px 0 16px;
+            overflow: hidden;
         }
 
         .result-title {
             font-weight: 600;
             font-size: 1rem;
             color: #2c3e66;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-bottom: 1px dashed #e2edf7;
-            padding-bottom: 0.6rem;
+            padding: 16px 20px 8px;
+            border-bottom: 1px solid #eef2f8;
+        }
+
+        .result-content {
+            padding: 16px 20px;
         }
 
         .info-row {
+            margin-bottom: 16px;
             display: flex;
             flex-wrap: wrap;
-            margin-bottom: 1rem;
-            line-height: 1.4;
+            gap: 8px;
         }
 
         .info-label {
-            width: 140px;
-            font-weight: 500;
+            font-weight: 600;
             color: #2c3e66;
+            width: 110px;
+            flex-shrink: 0;
         }
 
         .info-value {
             flex: 1;
-            color: #1f2b48;
+            color: #1e293b;
             word-break: break-word;
         }
 
         .badge {
             display: inline-block;
             background: #eef2ff;
-            padding: 0.2rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
             font-weight: 500;
         }
 
-        .badge-green {
-            background: #e0f2e9;
-            color: #1f6e43;
-        }
-
-        .badge-blue {
-            background: #e6f0fa;
-            color: #1e6f9f;
-        }
-
-        .badge-orange {
-            background: #fff0e0;
-            color: #b45b0a;
-        }
+        .badge-green { background: #e0f2e9; color: #1f6e43; }
+        .badge-orange { background: #fff0e0; color: #b45b0a; }
+        .badge-blue { background: #e6f0fa; color: #1e6f9f; }
 
         .no-data {
             color: #8a99b0;
             text-align: center;
-            padding: 1.5rem 0;
+            padding: 20px 0;
             font-style: italic;
         }
 
-        .example-tag {
-            margin-top: 1rem;
-            font-size: 0.75rem;
-            color: #6c7a91;
-            background: #f1f5f9;
-            padding: 0.5rem 0.8rem;
-            border-radius: 1rem;
-            display: inline-block;
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c7a8e;
+        }
+
+        .error {
+            color: #b91c1c;
+            background: #fee2e2;
+            padding: 12px;
+            border-radius: 20px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+        }
+
+        /* 官方链接区域 */
+        .official-section {
+            margin-top: 20px;
+            background: #f9fbfe;
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid #eef2f8;
+        }
+
+        .official-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #2c3e66;
+            margin-bottom: 12px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .official-btn {
+            background: white;
+            border: 1px solid #dce3ec;
+            padding: 10px 16px;
+            border-radius: 40px;
+            color: #1e2a3e;
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .official-btn:active {
+            background: #eef2fa;
+        }
+
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #8ba0bc;
+            margin-top: 20px;
         }
 
         hr {
-            margin: 1rem 0;
+            margin: 16px 0;
             border: 0;
             height: 1px;
             background: #eef2f8;
         }
 
-        footer {
-            font-size: 0.7rem;
-            text-align: center;
-            margin-top: 1.5rem;
-            color: #8ba0bc;
+        /* 响应式优化 */
+        @media (max-width: 500px) {
+            body { padding: 16px 12px 32px; }
+            .card { padding: 18px; }
+            .info-label { width: 100%; margin-bottom: 2px; }
+            .input-group input { padding: 12px 16px; }
+            .input-group button { padding: 10px 16px; }
         }
     </style>
 </head>
 <body>
 <div class="card">
-    <h1>
-        📦 产品查询
-    </h1>
-    <div class="sub">
-        输入产品名称或批准文号 · 查询厂家、进出口资质及功能属性
-    </div>
+    <h1>📦 产品智能查询</h1>
+    <div class="sub">输入产品名称，AI 实时查询厂家、资质、功能</div>
 
-    <div class="search-box">
-        <input type="text" id="productInput" class="search-input" placeholder="例如：蓝莓叶黄素眼睛喷雾 或 豫健用生【2025】第0071号" autocomplete="off">
-        <button id="searchBtn" class="search-btn">🔍 查询</button>
-    </div>
-
-    <div class="result-area" id="resultArea">
-        <div class="result-title">
-            📋 查询结果
-        </div>
-        <div id="resultContent">
-            <div class="no-data">等待输入查询…<br>可尝试“蓝莓叶黄素眼睛喷雾”或“豫健用生【2025】第0071号”</div>
+    <!-- 手动查询 -->
+    <div class="search-section">
+        <div class="input-group">
+            <input type="text" id="productName" placeholder="例如：双氯酸钠气雾剂、布洛芬" autocomplete="off">
+            <button id="queryBtn">🔍 查询</button>
         </div>
     </div>
 
-    <div class="example-tag">
-        💡 演示数据包含：蓝莓叶黄素眼睛喷雾、豫健用生【2025】第0071号、豫健用生【2025】第1372号
+    <!-- 拍照/上传识别 -->
+    <div class="ocr-section">
+        <div class="ocr-title">📸 拍照 / 上传图片识别文字</div>
+        <div class="ocr-buttons">
+            <button id="uploadBtn" class="ocr-btn">📁 选择图片</button>
+            <button id="cameraBtn" class="ocr-btn">📷 拍照识别</button>
+        </div>
+        <div class="image-preview" id="imagePreview">
+            <img id="previewImg" alt="图片预览">
+        </div>
+        <div class="ocr-status" id="ocrStatus"></div>
+        <div class="ocr-result-text" id="ocrResultText">
+            📝 识别结果：<span id="recognizedText"></span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
     </div>
-    <footer>
-        本查询基于公开备案信息模拟，真实数据需接入国家药监局/海关等官方接口
-    </footer>
+
+    <!-- 查询结果展示 -->
+    <div class="result-area">
+        <div class="result-title">📋 查询结果</div>
+        <div id="resultContent" class="result-content">
+            <div class="no-data">等待输入产品名称，点击“查询”后 AI 将返回详细信息</div>
+        </div>
+    </div>
+
+    <!-- 官方链接 -->
+    <div class="official-section">
+        <div class="official-title">🏛️ 官方查询平台</div>
+        <div class="button-group">
+            <a href="https://www.nmpa.gov.cn/datasearch/" target="_blank" rel="noopener noreferrer" class="official-btn">💊 国家药监局数据查询</a>
+            <a href="http://credit.customs.gov.cn/ccppwebserver/pages/ccpp/html/ccppindex.html" target="_blank" rel="noopener noreferrer" class="official-btn">🚢 中国海关进出口备案</a>
+        </div>
+    </div>
+    <div class="footer-note">
+        🔍 图片识别使用 Tesseract.js，支持中文/英文。<br>
+        查询结果由 AI 联网生成，仅供参考，请以官方信息为准。
+    </div>
 </div>
 
 <script>
-    // ---------- 产品数据库（模拟）----------
-    // 实际应用可替换为 API 请求
-    const productDB = [
-        {
-            keywords: ["蓝莓叶黄素眼睛喷雾", "蓝莓叶黄素喷雾", "叶黄素眼睛喷雾"],
-            productName: "蓝莓叶黄素眼睛喷雾",
-            manufacturer: "南阳宛草方药业有限公司",
-            // 是否有进出口资质：从之前的对话信息，未查到该公司有明确的进出口备案（无对外贸易经营者备案登记），故设为“暂未具备”
-            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
-            // 功能分类: 保健 / 治疗
-            functionType: "保健功能",   // 依据“豫健用生”为保健用品，不能治病
-            additionalInfo: "批准文号：豫健用生【2025】第0071号 / 豫健用生【2025】第1372号（保健用品）"
-        },
-        {
-            keywords: ["豫健用生【2025】第0071号", "0071号", "豫健用生2025第0071号"],
-            productName: "蓝莓叶黄素眼睛喷雾（0071批）",
-            manufacturer: "南阳宛草方药业有限公司",
-            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
-            functionType: "保健功能",
-            additionalInfo: "河南省保健用品批号，不可替代药品治疗疾病。"
-        },
-        {
-            keywords: ["豫健用生【2025】第1372号", "1372号", "豫健用生2025第1372号"],
-            productName: "蓝莓叶黄素眼睛喷雾（1372批）",
-            manufacturer: "南阳宛草方药业有限公司",
-            importExportQualification: "暂未具备（无公开对外贸易备案记录）",
-            functionType: "保健功能",
-            additionalInfo: "同系列保健用品，具有缓解眼疲劳的保健作用。"
-        },
-        // 可扩展其他示例产品，此处仅展示核心演示数据
-        {
-            keywords: ["布洛芬", "布洛芬片"],
-            productName: "布洛芬片（示例）",
-            manufacturer: "某制药有限公司",
-            importExportQualification: "具备药品出口资质（需核对具体企业）",
-            functionType: "治病功能（解热镇痛抗炎）",
-            additionalInfo: "此为示例数据，真实产品需查询国药准字。"
-        }
-    ];
+    // ===================== 配置 =====================
+    // 请替换为你自己的 Cloudflare Worker 地址
+    const API_URL = 'https://test-product-query-api.ouwen615.workers.dev';
 
-    // 模糊匹配函数（不区分大小写，去除空格）
-    function normalizeStr(str) {
-        return str.trim().toLowerCase().replace(/\s+/g, '');
-    }
-
-    function searchProduct(query) {
-        if (!query || query.trim() === "") {
-            return null;
-        }
-        const normalizedQuery = normalizeStr(query);
-        // 遍历数据库
-        for (let item of productDB) {
-            for (let kw of item.keywords) {
-                if (normalizeStr(kw) === normalizedQuery) {
-                    return item;
-                }
-            }
-        }
-        // 未精确匹配时，尝试包含匹配（部分关键词）
-        for (let item of productDB) {
-            for (let kw of item.keywords) {
-                if (normalizedQuery.includes(normalizeStr(kw)) || normalizeStr(kw).includes(normalizedQuery)) {
-                    return item;
-                }
-            }
-        }
-        return null;
-    }
-
-    // 渲染结果
-    function renderResult(product) {
+    // ===================== 查询函数 =====================
+    async function queryProduct(productName) {
         const resultDiv = document.getElementById('resultContent');
-        if (!product) {
-            resultDiv.innerHTML = `
-                <div class="no-data">
-                    ⚠️ 未找到相关产品信息<br>
-                    请尝试输入：蓝莓叶黄素眼睛喷雾 或 批准文号 豫健用生【2025】第0071号
+        resultDiv.innerHTML = '<div class="loading">⏳ 正在查询中，请稍候...</div>';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productName: productName })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || '查询失败');
+            }
+
+            // 展示结果
+            let functionBadgeClass = 'badge-blue';
+            if (data.functionType && data.functionType.includes('保健')) functionBadgeClass = 'badge-green';
+            else if (data.functionType && data.functionType.includes('治病')) functionBadgeClass = 'badge-orange';
+
+            let importBadgeClass = (data.importExport && data.importExport.includes('具备')) ? 'badge-green' : 'badge-blue';
+
+            let html = `
+                <div class="info-row">
+                    <div class="info-label">🏭 生产厂家</div>
+                    <div class="info-value"><strong>${escapeHtml(data.manufacturer || '未获取到')}</strong></div>
                 </div>
-            `;
-            return;
-        }
-
-        // 根据功能类型添加不同样式
-        let functionBadgeClass = "";
-        let functionText = product.functionType;
-        if (functionText.includes("保健")) {
-            functionBadgeClass = "badge-green";
-        } else if (functionText.includes("治病")) {
-            functionBadgeClass = "badge-orange";
-        } else {
-            functionBadgeClass = "badge-blue";
-        }
-
-        // 进出口资质显示样式
-        let importBadgeClass = product.importExportQualification.includes("具备") ? "badge-green" : "badge-blue";
-
-        let html = `
-            <div class="info-row">
-                <div class="info-label">🏭 生产厂家</div>
-                <div class="info-value"><strong>${escapeHtml(product.manufacturer)}</strong></div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">🌍 进出口资质</div>
-                <div class="info-value"><span class="badge ${importBadgeClass}">${escapeHtml(product.importExportQualification)}</span></div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">💊 功能属性</div>
-                <div class="info-value"><span class="badge ${functionBadgeClass}">${escapeHtml(product.functionType)}</span>
-                ${product.functionType === "保健功能" ? '<span style="font-size:0.75rem; margin-left: 0.5rem; color:#6c7a91;">（不能替代药品治疗疾病）</span>' : ''}
+                <div class="info-row">
+                    <div class="info-label">🌍 进出口资质</div>
+                    <div class="info-value"><span class="badge ${importBadgeClass}">${escapeHtml(data.importExport || '未获取到')}</span></div>
                 </div>
-            </div>
-        `;
-        if (product.additionalInfo) {
-            html += `
-                <hr>
+                <div class="info-row">
+                    <div class="info-label">💊 功能属性</div>
+                    <div class="info-value"><span class="badge ${functionBadgeClass}">${escapeHtml(data.functionType || '未获取到')}</span>
+                    ${data.functionType && data.functionType.includes('保健') ? '<span style="font-size:0.7rem; margin-left:8px; color:#6c7a91;">（不能替代药品治疗）</span>' : ''}
+                    </div>
+                </div>
                 <div class="info-row">
                     <div class="info-label">📌 补充信息</div>
-                    <div class="info-value">${escapeHtml(product.additionalInfo)}</div>
+                    <div class="info-value">${escapeHtml(data.additional || '未获取到')}</div>
                 </div>
             `;
+            resultDiv.innerHTML = html;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">❌ 查询出错：${escapeHtml(error.message)}<br>请检查网络或稍后重试。</div>`;
         }
-        resultDiv.innerHTML = html;
     }
 
-    // 简单防XSS
     function escapeHtml(str) {
         if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-            return c;
-        });
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
     }
 
-    // 查询入口
-    function performQuery() {
-        const inputElem = document.getElementById('productInput');
-        let query = inputElem.value;
-        if (!query.trim()) {
-            document.getElementById('resultContent').innerHTML = `<div class="no-data">请输入产品名称或批准文号后查询</div>`;
+    // ===================== OCR 图片识别 =====================
+    async function recognizeImage(file) {
+        const statusDiv = document.getElementById('ocrStatus');
+        const resultSpan = document.getElementById('recognizedText');
+        const resultDiv = document.getElementById('ocrResultText');
+
+        statusDiv.innerHTML = "⏳ 正在识别图片中的文字...";
+        resultDiv.style.display = "none";
+
+        try {
+            const { data: { text } } = await Tesseract.recognize(
+                file,
+                'chi_sim+eng',
+                {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusDiv.innerHTML = `⏳ 识别进度：${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                }
+            );
+
+            const cleaned = text.trim();
+            if (!cleaned) {
+                statusDiv.innerHTML = "⚠️ 未能识别出文字，请确保图片清晰且包含文字。";
+                return null;
+            }
+
+            statusDiv.innerHTML = "✅ 识别完成！";
+            resultSpan.innerText = cleaned;
+            resultDiv.style.display = "block";
+            return cleaned;
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerHTML = "❌ 识别失败，请重试。";
+            return null;
+        }
+    }
+
+    async function handleImageFile(file) {
+        if (!file) return;
+
+        // 预览
+        const previewImg = document.getElementById('previewImg');
+        const previewDiv = document.getElementById('imagePreview');
+        const url = URL.createObjectURL(file);
+        previewImg.src = url;
+        previewDiv.style.display = "block";
+
+        const recognized = await recognizeImage(file);
+        if (recognized) {
+            // 填入输入框并自动查询
+            const inputEl = document.getElementById('productName');
+            inputEl.value = recognized;
+            queryProduct(recognized);
+        }
+
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+
+    // ===================== 事件绑定 =====================
+    document.getElementById('queryBtn').addEventListener('click', () => {
+        const product = document.getElementById('productName').value.trim();
+        if (!product) {
+            alert('请输入产品名称');
             return;
         }
-        const result = searchProduct(query);
-        renderResult(result);
-    }
+        queryProduct(product);
+    });
 
-    // 绑定事件
-    document.getElementById('searchBtn').addEventListener('click', performQuery);
-    document.getElementById('productInput').addEventListener('keypress', function(e) {
+    document.getElementById('productName').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            performQuery();
+            const product = e.target.value.trim();
+            if (product) queryProduct(product);
         }
     });
 
-    // 初始可聚焦
-    document.getElementById('productInput').focus();
+    // 上传图片
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+        fileInput.value = '';
+    });
+
+    // 拍照
+    const cameraBtn = document.getElementById('cameraBtn');
+    const cameraInput = document.getElementById('cameraInput');
+    cameraBtn.addEventListener('click', () => cameraInput.click());
+    cameraInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+        cameraInput.value = '';
+    });
 </script>
 </body>
 </html>

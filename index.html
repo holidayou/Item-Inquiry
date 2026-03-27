@@ -1,138 +1,289 @@
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const action = url.searchParams.get('action') || 'query';
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>药品智能查询</title>
+    <script src="https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+    <style>
+        /* 样式与之前相同，此处省略，可沿用之前的完整样式 */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: #f5f7fb; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif; padding: 20px 16px 40px; min-height: 100vh; }
+        .card { max-width: 550px; margin: 0 auto; background: white; border-radius: 32px; box-shadow: 0 8px 28px rgba(0,0,0,0.08); padding: 20px 20px 28px; }
+        h1 { font-size: 1.8rem; font-weight: 600; background: linear-gradient(135deg, #1e2a3a, #2c3e66); background-clip: text; -webkit-background-clip: text; color: transparent; margin-bottom: 6px; }
+        .sub { font-size: 0.85rem; color: #6c7a8e; border-left: 3px solid #2c7da0; padding-left: 12px; margin-bottom: 24px; }
+        .search-section { margin-bottom: 20px; position: relative; }
+        .input-group { display: flex; gap: 10px; align-items: center; background: #f8fafc; border-radius: 60px; padding: 4px; border: 1px solid #e2e8f0; }
+        .input-group input { flex: 1; padding: 14px 18px; font-size: 1rem; border: none; background: transparent; outline: none; font-family: inherit; }
+        .input-group button { background: #1e2a3e; border: none; padding: 12px 20px; border-radius: 60px; font-weight: 500; color: white; font-size: 0.95rem; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .input-group button:active { transform: scale(0.96); background: #0f1a24; }
+        .suggestions { position: absolute; top: calc(100% + 5px); left: 0; right: 0; background: white; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; z-index: 10; display: none; border: 1px solid #e2e8f0; }
+        .suggestion-item { padding: 12px 18px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; }
+        .suggestion-item:active { background: #f0f4fa; }
+        .ocr-section { background: #f9fbfe; border-radius: 24px; padding: 16px; margin-bottom: 24px; border: 1px solid #eef2f8; }
+        .ocr-title { font-weight: 600; font-size: 0.9rem; color: #2c3e66; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .ocr-buttons { display: flex; gap: 12px; margin-bottom: 12px; }
+        .ocr-btn { flex: 1; background: white; border: 1px solid #cbd5e1; padding: 10px 12px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; text-align: center; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .ocr-btn:active { background: #eef2fa; }
+        .image-preview { margin-top: 12px; max-width: 100%; border-radius: 20px; overflow: hidden; display: none; background: #f1f5f9; }
+        .image-preview img { width: 100%; max-height: 180px; object-fit: contain; display: block; }
+        .ocr-status { font-size: 0.75rem; color: #6c7a8e; margin-top: 8px; padding: 4px 0; }
+        .ocr-result-text { background: #f1f5f9; padding: 10px 12px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; word-break: break-word; display: none; }
+        .result-area { background: #ffffff; border-radius: 24px; border: 1px solid #eef2f8; margin: 20px 0 16px; overflow: hidden; }
+        .result-title { font-weight: 600; font-size: 1rem; color: #2c3e66; padding: 16px 20px 8px; border-bottom: 1px solid #eef2f8; }
+        .result-content { padding: 16px 20px; }
+        .info-row { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .info-label { font-weight: 600; color: #2c3e66; width: 110px; flex-shrink: 0; }
+        .info-value { flex: 1; color: #1e293b; word-break: break-word; }
+        .badge { display: inline-block; background: #eef2ff; padding: 4px 12px; border-radius: 40px; font-size: 0.75rem; font-weight: 500; }
+        .badge-green { background: #e0f2e9; color: #1f6e43; }
+        .badge-orange { background: #fff0e0; color: #b45b0a; }
+        .badge-blue { background: #e6f0fa; color: #1e6f9f; }
+        .no-data { color: #8a99b0; text-align: center; padding: 20px 0; font-style: italic; }
+        .loading { text-align: center; padding: 20px; color: #6c7a8e; }
+        .error { color: #b91c1c; background: #fee2e2; padding: 12px; border-radius: 20px; margin: 10px 0; font-size: 0.85rem; }
+        .official-section { margin-top: 20px; background: #f9fbfe; border-radius: 24px; padding: 16px; border: 1px solid #eef2f8; }
+        .official-title { font-weight: 600; font-size: 0.9rem; color: #2c3e66; margin-bottom: 12px; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 12px; }
+        .official-btn { background: white; border: 1px solid #dce3ec; padding: 10px 16px; border-radius: 40px; color: #1e2a3e; text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .official-btn:active { background: #eef2fa; }
+        .footer-note { font-size: 0.7rem; text-align: center; color: #8ba0bc; margin-top: 20px; }
+        hr { margin: 16px 0; border: 0; height: 1px; background: #eef2f8; }
+        @media (max-width: 500px) { body { padding: 16px 12px 32px; } .card { padding: 18px; } .info-label { width: 100%; margin-bottom: 2px; } .input-group input { padding: 12px 16px; } .input-group button { padding: 10px 16px; } }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>📦 药品智能查询</h1>
+    <div class="sub">输入产品名称，AI 实时推荐并查询厂家、资质、功能</div>
 
-    // CORS 预检
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
+    <div class="search-section">
+        <div class="input-group">
+            <input type="text" id="productName" placeholder="例如：布洛芬、阿莫西林..." autocomplete="off">
+            <button id="queryBtn">🔍 查询</button>
+        </div>
+        <div id="suggestions" class="suggestions"></div>
+    </div>
+
+    <!-- 拍照/上传识别区域 -->
+    <div class="ocr-section">
+        <div class="ocr-title">📸 拍照 / 上传图片识别文字</div>
+        <div class="ocr-buttons">
+            <button id="uploadBtn" class="ocr-btn">📁 选择图片</button>
+            <button id="cameraBtn" class="ocr-btn">📷 拍照识别</button>
+        </div>
+        <div class="image-preview" id="imagePreview"><img id="previewImg" alt="图片预览"></div>
+        <div class="ocr-status" id="ocrStatus"></div>
+        <div class="ocr-result-text" id="ocrResultText">📝 识别结果：<span id="recognizedText"></span></div>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+    </div>
+
+    <!-- 查询结果展示 -->
+    <div class="result-area">
+        <div class="result-title">📋 查询结果</div>
+        <div id="resultContent" class="result-content"><div class="no-data">等待输入药品名称，点击“查询”后 AI 将返回详细信息</div></div>
+    </div>
+
+    <!-- 官方链接 -->
+    <div class="official-section">
+        <div class="official-title">🏛️ 官方查询平台</div>
+        <div class="button-group">
+            <a href="https://www.nmpa.gov.cn/datasearch/" target="_blank" rel="noopener noreferrer" class="official-btn">💊 国家药监局数据查询</a>
+            <a href="http://credit.customs.gov.cn/ccppwebserver/pages/ccpp/html/ccppindex.html" target="_blank" rel="noopener noreferrer" class="official-btn">🚢 中国海关进出口备案</a>
+        </div>
+    </div>
+    <div class="footer-note">🔍 输入时 AI 实时推荐药品名称；拍照识别后自动提取关键信息并查询。</div>
+</div>
+
+<script>
+    // ===================== 配置 =====================
+    const API_URL = 'https://你的worker域名.workers.dev'; // 替换为实际域名
+
+    // ===================== 辅助函数 =====================
+    let suggestTimeout = null;
+
+    async function fetchSuggestions(query) {
+        if (!query.trim()) return [];
+        try {
+            const resp = await fetch(`${API_URL}?action=suggest&q=${encodeURIComponent(query)}`);
+            const data = await resp.json();
+            return data.suggestions || [];
+        } catch (err) {
+            console.error('获取建议失败', err);
+            return [];
+        }
     }
 
-    // 处理建议请求
-    if (action === 'suggest') {
-      const query = url.searchParams.get('q');
-      if (!query) return jsonResponse({ suggestions: [] });
-      const apiKey = env.DEEPSEEK_API_KEY;
-      if (!apiKey) return jsonResponse({ error: '未配置 API Key' }, 500);
-      const prompt = `请根据用户输入“${query}”，返回最多5个可能的药品名称（仅名称，不要编号），用 JSON 数组格式，例如：["布洛芬","阿莫西林"]。如果输入是批准文号，返回包含该文号的产品名称。`;
-      try {
-        const suggestions = await callDeepSeek(prompt, apiKey);
-        return jsonResponse({ suggestions: suggestions.slice(0, 5) });
-      } catch (err) {
-        return jsonResponse({ suggestions: [] });
-      }
+    function showSuggestions(items) {
+        const suggestionsDiv = document.getElementById('suggestions');
+        if (!items.length) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        suggestionsDiv.innerHTML = items.map(s => `<div class="suggestion-item">${escapeHtml(s)}</div>`).join('');
+        suggestionsDiv.style.display = 'block';
+        document.querySelectorAll('.suggestion-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const name = el.innerText;
+                document.getElementById('productName').value = name;
+                suggestionsDiv.style.display = 'none';
+                queryProduct(name);
+            });
+        });
     }
 
-    // 处理图片文字提取关键词
-    if (action === 'extract') {
-      if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-      let { text } = await request.json();
-      if (!text) return jsonResponse({ error: '缺少文字内容' }, 400);
-      const apiKey = env.DEEPSEEK_API_KEY;
-      if (!apiKey) return jsonResponse({ error: '未配置 API Key' }, 500);
-      const prompt = `请从以下文字中提取药品名称或批准文号（如果有多个，只返回最可能的一个）。只返回提取到的名称或文号，不要其他内容。如果无法提取，返回空字符串。\n\n文字内容：${text}`;
-      try {
-        const keyword = await callDeepSeek(prompt, apiKey);
-        return jsonResponse({ keyword: keyword.trim() });
-      } catch (err) {
-        return jsonResponse({ keyword: '' });
-      }
+    function hideSuggestions(e) {
+        const suggestionsDiv = document.getElementById('suggestions');
+        const input = document.getElementById('productName');
+        if (!suggestionsDiv.contains(e.target) && e.target !== input) {
+            suggestionsDiv.style.display = 'none';
+        }
     }
 
-    // 原有的产品查询逻辑（POST 请求）
-    if (request.method !== 'POST') {
-      return jsonResponse({ error: 'Method not allowed' }, 405);
+    // ===================== 产品查询 =====================
+    async function queryProduct(productName) {
+        const resultDiv = document.getElementById('resultContent');
+        resultDiv.innerHTML = '<div class="loading">⏳ 正在查询中，请稍候...</div>';
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productName })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '查询失败');
+
+            let functionBadgeClass = 'badge-blue';
+            if (data.functionType?.includes('保健')) functionBadgeClass = 'badge-green';
+            else if (data.functionType?.includes('治病')) functionBadgeClass = 'badge-orange';
+            let importBadgeClass = (data.importExport?.includes('具备')) ? 'badge-green' : 'badge-blue';
+
+            let html = `
+                <div class="info-row"><div class="info-label">🏭 生产厂家</div><div class="info-value"><strong>${escapeHtml(data.manufacturer || '未获取到')}</strong></div></div>
+                <div class="info-row"><div class="info-label">🌍 进出口资质</div><div class="info-value"><span class="badge ${importBadgeClass}">${escapeHtml(data.importExport || '未获取到')}</span></div></div>
+                <div class="info-row"><div class="info-label">💊 功能属性</div><div class="info-value"><span class="badge ${functionBadgeClass}">${escapeHtml(data.functionType || '未获取到')}</span>
+                ${data.functionType?.includes('保健') ? '<span style="font-size:0.7rem; margin-left:8px; color:#6c7a91;">（不能替代药品治疗）</span>' : ''}</div></div>
+                <div class="info-row"><div class="info-label">📌 补充信息</div><div class="info-value">${escapeHtml(data.additional || '未获取到')}</div></div>
+            `;
+            resultDiv.innerHTML = html;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="error">❌ 查询出错：${escapeHtml(error.message)}</div>`;
+        }
     }
 
-    let productName;
-    try {
-      const body = await request.json();
-      productName = body.productName?.trim();
-    } catch (e) {
-      return jsonResponse({ error: '无效的 JSON 请求体' }, 400);
-    }
-    if (!productName) {
-      return jsonResponse({ error: '产品名称不能为空' }, 400);
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
     }
 
-    const apiKey = env.DEEPSEEK_API_KEY;
-    if (!apiKey) return jsonResponse({ error: '服务器未配置 API Key' }, 500);
-
-    const prompt = `请帮我查询“${productName}”这款产品的详细信息，包括：
-1. 生产厂家全称
-2. 是否具备进出口资质（根据公开信息判断）
-3. 功能属性：是保健功能还是治病功能（药品/医疗器械）
-4. 补充说明（批准文号、使用注意事项等）
-请用简洁的中文回答，每项一行，格式如下：
-厂家：xxx
-进出口资质：xxx
-功能属性：xxx
-补充：xxx`;
-
-    try {
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: '你是一个专业的产品信息查询助手，可以联网搜索最新公开数据。回答时请严格遵循用户要求的格式。' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.3,
-          enable_search: true,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'API 调用失败');
-      const aiReply = data.choices[0].message.content;
-      const lines = aiReply.split('\n');
-      let result = { manufacturer: '未获取到', importExport: '未获取到', functionType: '未获取到', additional: '未获取到' };
-      for (const line of lines) {
-        if (line.includes('厂家：')) result.manufacturer = line.split('厂家：')[1].trim();
-        else if (line.includes('进出口资质：')) result.importExport = line.split('进出口资质：')[1].trim();
-        else if (line.includes('功能属性：')) result.functionType = line.split('功能属性：')[1].trim();
-        else if (line.includes('补充：')) result.additional = line.split('补充：')[1].trim();
-      }
-      return jsonResponse(result);
-    } catch (error) {
-      console.error(error);
-      return jsonResponse({ error: error.message }, 500);
+    // ===================== 图片识别 + DeepSeek 提取关键词 =====================
+    async function extractKeywordFromText(text) {
+        try {
+            const resp = await fetch(`${API_URL}?action=extract`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await resp.json();
+            return data.keyword || '';
+        } catch (err) {
+            console.error('提取关键词失败', err);
+            return '';
+        }
     }
 
-    // 辅助函数
-    function jsonResponse(data, status = 200) {
-      return new Response(JSON.stringify(data), {
-        status,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      });
+    async function recognizeImage(file) {
+        const statusDiv = document.getElementById('ocrStatus');
+        const resultSpan = document.getElementById('recognizedText');
+        const resultDiv = document.getElementById('ocrResultText');
+        statusDiv.innerHTML = "⏳ 正在识别图片中的文字...";
+        resultDiv.style.display = "none";
+        try {
+            const { data: { text } } = await Tesseract.recognize(file, 'chi_sim+eng', {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        statusDiv.innerHTML = `⏳ 识别进度：${Math.round(m.progress * 100)}%`;
+                    }
+                }
+            });
+            const cleaned = text.trim();
+            if (!cleaned) {
+                statusDiv.innerHTML = "⚠️ 未能识别出文字";
+                return;
+            }
+            statusDiv.innerHTML = "✅ 识别完成，正在提取关键信息...";
+            resultSpan.innerText = cleaned;
+            resultDiv.style.display = "block";
+
+            // 调用 Worker 提取关键词
+            const keyword = await extractKeywordFromText(cleaned);
+            if (keyword) {
+                const inputEl = document.getElementById('productName');
+                inputEl.value = keyword;
+                statusDiv.innerHTML = `✅ 已提取关键词：${keyword}，正在查询...`;
+                queryProduct(keyword);
+            } else {
+                statusDiv.innerHTML = "⚠️ 未能从文字中提取出有效药品名称，请手动输入。";
+            }
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerHTML = "❌ 识别失败，请重试。";
+        }
     }
 
-    async function callDeepSeek(prompt, apiKey) {
-      const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-        }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error?.message);
-      return data.choices[0].message.content;
+    async function handleImageFile(file) {
+        if (!file) return;
+        const previewImg = document.getElementById('previewImg');
+        const previewDiv = document.getElementById('imagePreview');
+        const url = URL.createObjectURL(file);
+        previewImg.src = url;
+        previewDiv.style.display = "block";
+        await recognizeImage(file);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
-  },
-};
+
+    // ===================== 事件绑定 =====================
+    document.getElementById('queryBtn').addEventListener('click', () => {
+        const name = document.getElementById('productName').value.trim();
+        if (!name) { alert('请输入药品名称'); return; }
+        queryProduct(name);
+    });
+
+    const inputEl = document.getElementById('productName');
+    inputEl.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (suggestTimeout) clearTimeout(suggestTimeout);
+        suggestTimeout = setTimeout(async () => {
+            const items = await fetchSuggestions(val);
+            showSuggestions(items);
+        }, 300);
+    });
+    document.addEventListener('click', hideSuggestions);
+
+    inputEl.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const name = e.target.value.trim();
+            if (name) queryProduct(name);
+            document.getElementById('suggestions').style.display = 'none';
+        }
+    });
+
+    // 图片上传/拍照
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
+        fileInput.value = '';
+    });
+    const cameraBtn = document.getElementById('cameraBtn');
+    const cameraInput = document.getElementById('cameraInput');
+    cameraBtn.addEventListener('click', () => cameraInput.click());
+    cameraInput.addEventListener('change', (e) => {
+        if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
+        cameraInput.value = '';
+    });
+</script>
+</body>
+</html>
